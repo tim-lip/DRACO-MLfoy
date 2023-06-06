@@ -805,51 +805,51 @@ Reco_ttH_whad_dr,0,4,50,-,Reco_ttH_whad_dr
 Reco_ttH_whaddau_m2,0,50,50,-,Reco_ttH_whaddau_m2
 Reco_JABDT_ttH_tophad_pt__P__toplep_pt__P__h_pt__DIV__Evt_HT__P__Evt_Pt_MET__P__Lep_Pt,0,1,20,-,Reco_JABDT_ttH_tophad_pt__P__toplep_pt__P__h_pt__DIV__Evt_HT__P__Evt_Pt_MET__P__Lep_Pt
 Reco_JABDT_ttbar_log_toplep_pt,0,10,50,-,Reco_JABDT_ttbar_log_toplep_pt
-blr, 0,1, 50,-,blr
-blr_transformed, -7,14,50,-,blr_transformed
-MEM, 0,1, 50,-,MEM
+blr,0,1,50,-,blr
+blr_transformed,-7,14,50,-,blr_transformed
+MEM,0,1,50,-,MEM
 bjet3_btag,0,1,50,-,bjet3_btag
 N_btags_Tight,2,6,5,-,N_btags_Tight
 N_btags_Loose,2,6,5,-,N_btags_Loose
 N_btags_Medium,2,6,5,-,N_btags_Medium
-avgDeltaR_tag_tag, 0,6,120, -, avgDeltaR_tag_tag
+avgDeltaR_tag_tag,0,6,120, -, avgDeltaR_tag_tag
 bjet2_btag,0,1,50,-,bjet2_btag
-maxDeltaEta_tag_tag, 0,5,100, -, maxDeltaEta_tag_tag
-btagDiscriminatorAverage_tagged, 0,1, 50,-,btagDiscriminatorAverage_tagged
-H0_tag, 0,3,100, -, H0_tag
-avgDeltaR_jet_tag, 0,6,120, -, avgDeltaR_jet_tag
-maxDeltaEta_jet_jet, 0,5,100, -, maxDeltaEta_jet_jet
+maxDeltaEta_tag_tag,0,5,100, -, maxDeltaEta_tag_tag
+btagDiscriminatorAverage_tagged,0,1,50,-,btagDiscriminatorAverage_tagged
+H0_tag,0,3,100, -, H0_tag
+avgDeltaR_jet_tag,0,6,120, -, avgDeltaR_jet_tag
+maxDeltaEta_jet_jet,0,5,100, -, maxDeltaEta_jet_jet
 HT_tags,0,600,50,-,H_{T}(tags)
-avgDeltaR_jet_jet, 0,6,120, -, avgDeltaR_jet_jet
-H2_tag, 0,3,100, -, H2_tag
-H3_tag, 0,3,100, -, H3_tag
-D_tag, 0,1, 50,-,D_tag
-aplanarity_tag, 0,1, 50,-,aplanarity_tag
-minDeltaR_tag_tag, 0,5,100, -, minDeltaR_tag_tag
-R2_tag, 0,1, 50,-,R2_tag
+avgDeltaR_jet_jet,0,6,120, -, avgDeltaR_jet_jet
+H2_tag,0,3,100, -, H2_tag
+H3_tag,0,3,100, -, H3_tag
+D_tag,0,1,50,-,D_tag
+aplanarity_tag,0,1,50,-,aplanarity_tag
+minDeltaR_tag_tag,0,5,100, -, minDeltaR_tag_tag
+R2_tag,0,1,50,-,R2_tag
 pT_tag_tag_min_deltaR,0,600,50,-,pT_tag_tag_min_deltaR
-centrality_tags, 0,1, 50,-,centrality_tags
+centrality_tags,0,1,50,-,centrality_tags
 bjet3_pt,0,600,50,-,bjet3_pt
 jet3_pt,0,600,50,-,jet3_pt
-R3_tag, 0,1, 50,-,R3_tag
-centrality_jets_leps, 0,1, 50,-,centrality_jets_leps
-jet3_btag, 0,1, 50,-,jet3_btag
-H2_jet, 0,1, 50,-,H2_jet
-D_jet, 0,1, 50,-,D_jet
+R3_tag,0,1,50,-,R3_tag
+centrality_jets_leps,0,1,50,-,centrality_jets_leps
+jet3_btag,0,1,50,-,jet3_btag
+H2_jet,0,1,50,-,H2_jet
+D_jet,0,1,50,-,D_jet
 mass_tag_tag_min_deltaR,0,600,50,-,mass_tag_tag_min_deltaR
 mass_jet_tag_min_deltaR,0,600,50,-,mass_jet_tag_min_deltaR
 mass_jet_jet_min_deltaR,0,600,50,-,mass_jet_jet_min_deltaR
 mass_tag_tag_max_mass,0,600,50,-,mass_tag_tag_max_mass
 mass_jet_tag_tag_max_pT,0,600,50,-,mass_jet_tag_tag_max_pT
 HT_jets,0,600,50,-,HT_jets
-twist_tag_tag_max_mass, -1.6,1.6, 100,-,twist_tag_tag_max_mass
-twist_jet_tag_max_mass, -1.6,1.6, 100,-,twist_jet_tag_max_mass
-twist_jet_jet_max_mass, -1.6,1.6, 100,-,twist_jet_jet_max_mass
+twist_tag_tag_max_mass,-1.6,1.6,100,-,twist_tag_tag_max_mass
+twist_jet_tag_max_mass,-1.6,1.6,100,-,twist_jet_tag_max_mass
+twist_jet_jet_max_mass,-1.6,1.6,100,-,twist_jet_jet_max_mass
 Reco_JABDT_ttbar_Jet_CSV_whaddau2,0,1,50,-,Reco_JABDT_ttbar_Jet_CSV_whaddau2
 Evt_Deta_JetsAverage,0,3,50,-,Evt_Deta_JetsAverage
 Reco_JABDT_ttbar_Jet_CSV_whaddau1,0,1,50,-,Reco_JABDT_ttbar_Jet_CSV_whaddau1
 Evt_CSV_avg_tagged,0.3,1,50,-,Evt_CSV_avg_tagged
-Jet_M[0],5.,150,50,-,Jet_M[0]
+Jet_M[0],5,150,50,-,Jet_M[0]
 Reco_JABDT_ttbar_Jet_CSV_btoplep,0,1,50,-,Reco_JABDT_ttbar_Jet_CSV_btoplep
 Reco_ttH_tophad_pt,-1.5,1000,50,-,Reco_ttH_tophad_pt
 Evt_M_JetsAverage,5,50,50,-,Evt_M_JetsAverage
@@ -868,13 +868,13 @@ Reco_ttH_bestJABDToutput,-1,0.7,50,-,Reco_ttH_bestJABDToutput
 Reco_tHq_bestJABDToutput,-1,0.7,50,-,Reco_tHq_bestJABDToutput
 CSV[1],0.277,1,50,-,CSV[1]
 Evt_Pt_JetsAverage,30,500,50,-,Evt_Pt_JetsAverage
-CSV[3],0.0,0.277,50,-,CSV[3]
+CSV[3],0,0.277,50,-,CSV[3]
 Reco_tHW_bestJABDToutput,-1,0.6,50,-,Reco_tHW_bestJABDToutput
 Reco_JABDT_tHW_Jet_CSV_btop,-1.5,1,50,-,Reco_JABDT_tHW_Jet_CSV_btop
 Reco_ttbar_bestJABDToutput,-0.4,0.7,50,-,Reco_ttbar_bestJABDToutput
 TaggedJet_CSV[3],0.277,1,50,-,TaggedJet_CSV[3]
 Reco_JABDT_ttH_log_toplep_pt,-1.5,7,50,-,Reco_JABDT_ttH_log_toplep_pt
-Evt_M_TaggedJetsAverage,5.,70,50,-,Evt_M_TaggedJetsAverage
+Evt_M_TaggedJetsAverage,5,70,50,-,Evt_M_TaggedJetsAverage
 N_BTagsL,3.5,9.5,6,-,N_BTagsL
 Jet_Pt[1],30,500,50,-,Jet_Pt[1]
 N_BTagsM,3.5,8.5,5,-,N_BTagsM
@@ -910,51 +910,102 @@ Reco_JABDT_ttbar_log_tophad_m,4,8,50,-,Reco_JABDT_ttbar_log_tophad_m
 Reco_JABDT_ttbar_log_whad_m,3,8,50,-,Reco_JABDT_ttbar_log_whad_m
 Evt_h1,-0.2,0.4,50,-,Evt_h1
 Reco_JABDT_tHq_abs_ljet_eta,-1.5,4.5,50,-,Reco_JABDT_tHq_abs_ljet_eta
-Evt_M_minDrLepTag,15.,400.,50,-,Evt_M_minDrLepTag
-Reco_ttH_toplep_m,-1.5,750.,50,-,Reco_ttH_toplep_m
-Reco_JABDT_ttH_Jet_CSV_btoplep,-1.5,1.,50,-,Reco_JABDT_ttH_Jet_CSV_btoplep
-Reco_JABDT_tHW_top_pt__P__h_pt__P__wb_pt__DIV__Evt_HT__P__Evt_Pt_MET__P__Lep_Pt,-1.5,1.,50,-,Reco_JABDT_tHW_energy_fraction
-Reco_tHW_whaddau_m1,-1.5,100.,50,-,Reco_tHW_whaddau_m1
+Evt_M_minDrLepTag,15,400,50,-,Evt_M_minDrLepTag
+Reco_ttH_toplep_m,-1.5,750,50,-,Reco_ttH_toplep_m
+Reco_JABDT_ttH_Jet_CSV_btoplep,-1.5,1,50,-,Reco_JABDT_ttH_Jet_CSV_btoplep
+Reco_JABDT_tHW_top_pt__P__h_pt__P__wb_pt__DIV__Evt_HT__P__Evt_Pt_MET__P__Lep_Pt,-1.5,1,50,-,Reco_JABDT_tHW_energy_fraction
+Reco_tHW_whaddau_m1,-1.5,100,50,-,Reco_tHW_whaddau_m1
 Reco_JABDT_ttH_log_toplep_m,-1.5,7.5,50,-,Reco_JABDT_ttH_log_toplep_m
-Reco_JABDT_tHq_ljet_e__M__btop_e,-1000.,2000.,50,-,Reco_JABDT_tHq_ljet_e__M__btop_e
-Reco_tHq_costhetastar,-5.0,1.,50,-,Reco_tHq_costhetastar
-Evt_M2_JetsAverage,50.,600.,50,-,Evt_M2_JetsAverage
-Evt_HT_tags,100.,1000.,50,-,Evt_HT_tags
-Reco_JABDT_tHq_log_ljet_pt,3.,7.5,50,-,Reco_JABDT_tHq_log_ljet_pt
-Reco_JABDT_tHW_log_top_m,-1.5,8.,50,-,Reco_JABDT_tHW_log_top_m
-Evt_M_Total,200.,3000.,50,-,Evt_M_Total
-Evt_Dr_JetsAverage,0.5,4.0,50,-,Evt_Dr_JetsAverage
-Reco_tHq_ljet_m,10.,75.,50,-,Reco_tHq_ljet_m
+Reco_JABDT_tHq_ljet_e__M__btop_e,-1000,2000,50,-,Reco_JABDT_tHq_ljet_e__M__btop_e
+Reco_tHq_costhetastar,-5,1,50,-,Reco_tHq_costhetastar
+Evt_M2_JetsAverage,50,600,50,-,Evt_M2_JetsAverage
+Evt_HT_tags,100,1000,50,-,Evt_HT_tags
+Reco_JABDT_tHq_log_ljet_pt,3,7.5,50,-,Reco_JABDT_tHq_log_ljet_pt
+Reco_JABDT_tHW_log_top_m,-1.5,8,50,-,Reco_JABDT_tHW_log_top_m
+Evt_M_Total,200,3000,50,-,Evt_M_Total
+Evt_Dr_JetsAverage,0.5,4,50,-,Evt_Dr_JetsAverage
+Reco_tHq_ljet_m,10,75,50,-,Reco_tHq_ljet_m
 Reco_JABDT_tHW_log_wb_m,-1.5,8.5,50,-,Reco_JABDT_tHW_log_wb_m
 ttbbReco_AddB1_Eta,-2.4,2.4,30,-,ttbbReco_AddB1_Eta
 ttbbReco_AddB2_Eta,-2.4,2.4,30,-,ttbbReco_AddB2_Eta
 ttbbReco_AddB1_Phi,-3.141,3.141,30,-,ttbbReco_AddB1_Phi
 ttbbReco_AddB2_Phi,-3.141,3.141,30,-,ttbbReco_AddB2_Phi
-ttbbReco_AddB1_CSV,0.0,1.0,30,-,ttbbReco_AddB1_CSV
-ttbbReco_AddB2_CSV,0.0,1.0,30,-,ttbbReco_AddB2_CSV
-ttbbReco_AddB1_M,0.,50.,30,-,ttbbReco_AddB1_M
-ttbbReco_AddB2_M,0.,50.,30,-,ttbbReco_AddB2_M
-ttbbReco_AddB1_E,0.,1000.,30,-,ttbbReco_AddB1_E
-ttbbReco_AddB2_E,0.,1000.,30,-,ttbbReco_AddB2_E
-ttbbReco_AddB1_Pt,30.0,500.,30,-,ttbbReco_AddB1_Pt
-ttbbReco_AddB2_Pt,30.0,500.,30,-,ttbbReco_AddB2_Pt
-ttbbReco_bb_dPhi,0.0,3.141,30,-,ttbbReco_bb_dPhi
-ttbbReco_bb_dEta,0.0,4.5,30,-,ttbbReco_bb_dEta
-ttbbReco_bb_dR,0.,5.,30,-,ttbbReco_bb_dR
-ttbbReco_bb_Pt,0.,600.,30,-,ttbbReco_bb_Pt
-ttbbReco_bb_Eta,-4.,4.,30,-,ttbbReco_bb_Eta
-ttbbReco_bb_M,0.,600.,30,-,ttbbReco_bb_M
-ttbbReco_bb_E,0.,1000.,30,-,ttbbReco_bb_E
-ttbbReco_bb_openingAngle,0.,3.141,30,-,ttbbReco_bb_openingAngle
+ttbbReco_AddB1_CSV,0,1,30,-,ttbbReco_AddB1_CSV
+ttbbReco_AddB2_CSV,0,1,30,-,ttbbReco_AddB2_CSV
+ttbbReco_AddB1_M,0,50,30,-,ttbbReco_AddB1_M
+ttbbReco_AddB2_M,0,50,30,-,ttbbReco_AddB2_M
+ttbbReco_AddB1_E,0,1000,30,-,ttbbReco_AddB1_E
+ttbbReco_AddB2_E,0,1000,30,-,ttbbReco_AddB2_E
+ttbbReco_AddB1_Pt,30,500,30,-,ttbbReco_AddB1_Pt
+ttbbReco_AddB2_Pt,30,500,30,-,ttbbReco_AddB2_Pt
+ttbbReco_bb_dPhi,0,3.141,30,-,ttbbReco_bb_dPhi
+ttbbReco_bb_dEta,0,4.5,30,-,ttbbReco_bb_dEta
+ttbbReco_bb_dR,0,5,30,-,ttbbReco_bb_dR
+ttbbReco_bb_Pt,0,600,30,-,ttbbReco_bb_Pt
+ttbbReco_bb_Eta,-4,4,30,-,ttbbReco_bb_Eta
+ttbbReco_bb_M,0,600,30,-,ttbbReco_bb_M
+ttbbReco_bb_E,0,1000,30,-,ttbbReco_bb_E
+ttbbReco_bb_openingAngle,0,3.141,30,-,ttbbReco_bb_openingAngle
 ttbbReco_AddB1_idx,-0.5,9.5,10,-,ttbbReco_AddB1_idx
 ttbbReco_AddB2_idx,-0.5,9.5,10,-,ttbbReco_AddB2_idx
-ttbbReco_bb_dKin,0.0,1.0,30,-,ttbbReco_bb_dKin
-ttbbReco_bb_dPt,0.0,500.,30,-,ttbbReco_bb_dPt
-ttbbReco_lepTop1_Pt,0.,600.,30,-,ttbbReco_lepTop1_Pt
-ttbbReco_lepTop1_Eta,-4.,4.,30,-,ttbbReco_lepTop1_Eta
-ttbbReco_lepTop1_M,0.,1000.,30,-,ttbbReco_lepTop1_M
-ttbbReco_lepTop1_E,0.,1200.,30,-,ttbbReco_lepTop1_E
-ttbbReco_lepTop2_Pt,0.,600.,30,-,ttbbReco_lepTop2_Pt
-ttbbReco_lepTop2_Eta,-4.,4.,30,-,ttbbReco_lepTop2_Eta
-ttbbReco_lepTop2_M,0.,1000.,30,-,ttbbReco_lepTop2_M
-ttbbReco_lepTop2_E,0.,1200.,30,-,ttbbReco_lepTop2_E
+ttbbReco_bb_dKin,0,1,30,-,ttbbReco_bb_dKin
+ttbbReco_bb_dPt,0,500,30,-,ttbbReco_bb_dPt
+ttbbReco_lepTop1_Pt,0,600,30,-,ttbbReco_lepTop1_Pt
+ttbbReco_lepTop1_Eta,-4,4,30,-,ttbbReco_lepTop1_Eta
+ttbbReco_lepTop1_M,0,1000,30,-,ttbbReco_lepTop1_M
+ttbbReco_lepTop1_E,0,1200,30,-,ttbbReco_lepTop1_E
+ttbbReco_lepTop2_Pt,0,600,30,-,ttbbReco_lepTop2_Pt
+ttbbReco_lepTop2_Eta,-4,4,30,-,ttbbReco_lepTop2_Eta
+ttbbReco_lepTop2_M,0,1000,30,-,ttbbReco_lepTop2_M
+ttbbReco_lepTop2_E,0,1200,30,-,ttbbReco_lepTop2_E
+pvxp_n,0,10,30,-,pvxp_n
+vxp_z,0,10,30,-,vxp_z
+met_et,0,10,30,-,met_et
+met_phi,0,10,30,-,met_phi
+lep_n,0,10,30,-,lep_n
+lep_truthMatched_0,0,10,30,-,lep_truthMatched_0
+lep_trigMatched_0,0,10,30,-,lep_trigMatched_0
+lep_pt_0,0,10,30,-,lep_pt_0
+lep_eta_0,0,10,30,-,lep_eta_0
+lep_phi_0,0,10,30,-,lep_phi_0
+lep_E_0,0,10,30,-,lep_E_0
+lep_z0_0,0,10,30,-,lep_z0_0
+lep_charge_0,0,10,30,-,lep_charge_0
+lep_type_0,0,10,30,-,lep_type_0
+lep_flag_0,0,10,30,-,lep_flag_0
+lep_ptcone30_0,0,10,30,-,lep_ptcone30_0
+lep_etcone20_0,0,10,30,-,lep_etcone20_0
+lep_trackd0pvunbiased_0,0,10,30,-,lep_trackd0pvunbiased_0
+lep_tracksigd0pvunbiased_0,0,10,30,-,lep_tracksigd0pvunbiased_0
+jet_n,0,10,30,-,jet_n
+alljet_n,0,10,30,-,alljet_n
+jet_pt_0,0,10,30,-,jet_pt_0
+jet_pt_1,0,10,30,-,jet_pt_1
+jet_pt_2,0,10,30,-,jet_pt_2
+jet_eta_0,0,10,30,-,jet_eta_0
+jet_eta_1,0,10,30,-,jet_eta_1
+jet_eta_2,0,10,30,-,jet_eta_2
+jet_phi_0,0,10,30,-,jet_phi_0
+jet_phi_1,0,10,30,-,jet_phi_1
+jet_phi_2,0,10,30,-,jet_phi_2
+jet_E_0,0,10,30,-,jet_E_0
+jet_E_1,0,10,30,-,jet_E_1
+jet_E_2,0,10,30,-,jet_E_2
+jet_m_0,0,10,30,-,jet_m_0
+jet_m_1,0,10,30,-,jet_m_1
+jet_m_2,0,10,30,-,jet_m_2
+jet_jvf_0,0,10,30,-,jet_jvf_0
+jet_jvf_1,0,10,30,-,jet_jvf_1
+jet_jvf_2,0,10,30,-,jet_jvf_2
+jet_trueflav_0,0,10,30,-,jet_trueflav_0
+jet_trueflav_1,0,10,30,-,jet_trueflav_1
+jet_trueflav_2,0,10,30,-,jet_trueflav_2
+jet_truthMatched_0,0,10,30,-,jet_truthMatched_0
+jet_truthMatched_1,0,10,30,-,jet_truthMatched_1
+jet_truthMatched_2,0,10,30,-,jet_truthMatched_2
+jet_SV0_0,0,10,30,-,jet_SV0_0
+jet_SV0_1,0,10,30,-,jet_SV0_1
+jet_SV0_2,0,10,30,-,jet_SV0_2
+jet_MV1_0,0,10,30,-,jet_MV1_0
+jet_MV1_1,0,10,30,-,jet_MV1_1
+jet_MV1_2,0,10,30,-,jet_MV1_2

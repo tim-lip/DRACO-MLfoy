@@ -22,33 +22,13 @@ options.initArguments()
 # load samples
 input_samples = df.InputSamples(options.getInputDirectory(), options.getActivatedSamples(), options.getTestPercentage(), options.getAddSampleSuffix())
 
-weight_expr = 'x.Weight_XS * x.Weight_CSV * x.Weight_GEN_nom * x.lumiWeight'
+weight_expr = 'x.scaleFactor_ELE * x.scaleFactor_MUON * x.scaleFactor_TRIGGER * x.scaleFactor_PILEUP * x.scaleFactor_ZVERTEX * x.mcWeight * x.scaleFactor_BTAG'
+
 # define all samples
-input_samples.addSample(options.getDefaultName("ttH")  , label = "ttH"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttHbb")  , label = "ttHbb"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttHnonbb")  , label = "ttHnonbb"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttmb") , label = "ttmb" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttbb") , label = "ttbb" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("tt2b") , label = "tt2b" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttb")  , label = "ttb"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttcc") , label = "ttcc" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttlf") , label = "ttlf" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("tHq") ,  label = "tHq" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("tHW") ,  label = "tHW" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("sig") ,  label = "sig" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("bkg") ,  label = "bkg" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-
-input_samples.addSample(options.getDefaultName("ttH_STXS_0") ,  label = "ttH_STXS_0" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttH_STXS_1") ,  label = "ttH_STXS_1" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttH_STXS_2") ,  label = "ttH_STXS_2" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttH_STXS_3") ,  label = "ttH_STXS_3" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttH_STXS_4") ,  label = "ttH_STXS_4" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-
-input_samples.addSample(options.getDefaultName("ttHbb_STXS_0") ,  label = "ttHbb_STXS_0" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttHbb_STXS_1") ,  label = "ttHbb_STXS_1" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttHbb_STXS_2") ,  label = "ttHbb_STXS_2" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttHbb_STXS_3") ,  label = "ttHbb_STXS_3" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
-input_samples.addSample(options.getDefaultName("ttHbb_STXS_4") ,  label = "ttHbb_STXS_4" , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr )
+input_samples.addSample(options.getDefaultName("ttbar")  , label = "ttbar"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr)
+input_samples.addSample(options.getDefaultName("singletop")  , label = "singletop"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr)
+input_samples.addSample(options.getDefaultName("W")  , label = "W"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr)
+input_samples.addSample(options.getDefaultName("Z")  , label = "Z"  , normalization_weight = options.getNomWeight(), total_weight_expr = weight_expr)
 
 
 # additional samples for adversary training
@@ -77,7 +57,11 @@ if not options.isAdversary():
         # balance samples per epoch such that there amount of samples per category is roughly equal
         balanceSamples  = options.doBalanceSamples(),
         evenSel         = options.doEvenSelection(),
-        norm_variables  = options.doNormVariables())
+        norm_variables  = options.doNormVariables(),
+        # implementation of options when using Domain Adaptation
+        domain_adaptation = options.doDomainAdaptation(),
+        grad_reversal_lambda = options.getGradReversalLambda()
+        )
 else:
     import DRACO_Frameworks.DNN.CAN as CAN
     # initializing CAN training class
@@ -98,6 +82,7 @@ else:
         norm_variables  = options.doNormVariables(),
         addSampleSuffix = options.getAddSampleSuffix())
 
+
 # build DNN model
 dnn.build_model(config=options.getNetConfig(), penalty=options.getPenalty())
 
@@ -115,6 +100,7 @@ dnn.get_input_weights()
 
 # save and print variable ranking according to all layer weights
 dnn.get_weights()
+
 
 # variation plots
 if options.doVariations():
@@ -142,21 +128,29 @@ if options.doPlots():
                 signal_class        = options.getSignal(),
                 privateWork         = options.isPrivateWork())
     else:
+        # plot the output nodes
+        if options.doDomainAdaptation():
+            dnn.plot_domain_output()
+            # dnn.plot_domain_outputNodes(  
+            #     log                 = options.doLogPlots(),
+            #     privateWork         = options.isPrivateWork(),
+            #     printROC            = False,
+            #     sigScale            = options.getSignalScale())
+
         # plot the confusion matrix
         dnn.plot_confusionMatrix(
             privateWork = options.isPrivateWork(),
             printROC    = options.doPrintROC())
 
-        # plot the output discriminators
-        dnn.plot_discriminators(
+        # plot the output nodes
+        dnn.plot_outputNodes(
             log                 = options.doLogPlots(),
-            signal_class        = options.getSignal(),
             privateWork         = options.isPrivateWork(),
             printROC            = options.doPrintROC(),
             sigScale            = options.getSignalScale())
 
-        # plot the output nodes
-        dnn.plot_outputNodes(
+        # plot the output discriminators
+        dnn.plot_discriminators(
             log                 = options.doLogPlots(),
             signal_class        = options.getSignal(),
             privateWork         = options.isPrivateWork(),
@@ -171,10 +165,10 @@ if options.doPlots():
             sigScale            = options.getSignalScale())
 
         # plot closure test
-        dnn.plot_closureTest(
-            log                 = options.doLogPlots(),
-            signal_class        = options.getSignal(),
-            privateWork         = options.isPrivateWork())
+        # dnn.plot_closureTest(
+        #     log                 = options.doLogPlots(),
+        #     signal_class        = options.getSignal(),
+        #     privateWork         = options.isPrivateWork())
 
         # plot ttbb KS test
         if options.isAdversary():
@@ -183,5 +177,9 @@ if options.doPlots():
                 signal_class        = options.getSignal(),
                 privateWork         = options.isPrivateWork())
 
+
 if options.doGradients():
     dnn.get_gradients(options.isBinary())
+
+if options.doDomainAdaptation():
+    dnn.save_da_information()

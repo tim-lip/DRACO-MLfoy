@@ -2,6 +2,8 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 import re
 import numpy as np
+import pandas as pd
+import os
 
 # dictionary for colors
 def GetPlotColor( cls ):
@@ -36,6 +38,13 @@ def GetPlotColor( cls ):
         "ttHbb_STXS_2":          ROOT.kBlue-2,
         "ttHbb_STXS_3":          ROOT.kBlue-3,
         "ttHbb_STXS_4":          ROOT.kBlue-4,
+
+        'singletop':        ROOT.kBlue,
+        'Z':                ROOT.kRed,
+        'W':                ROOT.kGreen,
+
+        'realData':         ROOT.kRed,
+        'simulatedData':    ROOT.kGreen        
         }
 
     return color_dict[cls]
@@ -44,23 +53,27 @@ def GetyTitle(privateWork = False):
     # if privateWork flag is enabled, normalize plots to unit area
     if privateWork:
         return "normalized to unit area"
-    return "Events expected"
+    # return "Events expected"
+    return ""
 
 
 # ===============================================
 # SETUP OF HISTOGRAMS
 # ===============================================
 def setupHistogram(
-        values, weights,
+        values,
         nbins, bin_range,
         xtitle, ytitle,
-        color = ROOT.kBlack, filled = True):
+        color = ROOT.kBlack, filled = True, weights=None):
     # define histogram
     histogram = ROOT.TH1D(xtitle, "", nbins, *bin_range)
     histogram.Sumw2(True)
-
-    for v, w in zip(values, weights):
-        histogram.Fill(v, w)
+    if weights:
+        for v, w in zip(values, weights):
+            histogram.Fill(v, w)
+    else:
+        for v in values:
+            histogram.Fill(v)
 
     histogram.SetStats(False)
     histogram.GetXaxis().SetTitle(xtitle)
@@ -72,6 +85,7 @@ def setupHistogram(
     histogram.GetXaxis().SetTitleSize(0.055)
     histogram.GetYaxis().SetLabelSize(0.055)
     histogram.GetXaxis().SetLabelSize(0.055)
+    # histogram.GetYaxis().SetMaxDigits(2)
 
     histogram.SetMarkerColor(color)
 
@@ -99,7 +113,7 @@ def setupYieldHistogram(yields, classes, n_classes, xtitle, ytitle, color = ROOT
 
     histogram.SetStats(False)
     histogram.GetXaxis().SetTitle(xtitle)
-    histogram.GetYaxis().SetTitle(ytitle)
+    # histogram.GetYaxis().SetTitle(ytitle)
 
     histogram.GetYaxis().SetTitleOffset(1.4)
     histogram.GetXaxis().SetTitleOffset(1.2)
@@ -119,7 +133,7 @@ def setupYieldHistogram(yields, classes, n_classes, xtitle, ytitle, color = ROOT
         histogram.SetFillColor(0)
         histogram.SetLineWidth(2)
 
-    for i, cls in enumerate(classes):
+    for i, cls in enumerate(["t#bar{t}", "t", "W", "Z"]):
         if i>=n_classes: continue
         histogram.GetXaxis().SetBinLabel(i+1, cls)
 
@@ -143,8 +157,8 @@ def setupConfusionMatrix(matrix, ncls, xtitle, ytitle, binlabel, errors = None):
             if has_errors:
                 cm.SetBinError(xit+1,yit+1, errors[xit, yit])
 
-    cm.GetXaxis().SetTitle(xtitle)
-    cm.GetYaxis().SetTitle(ytitle)
+    cm.GetXaxis().SetTitle("vorhergesagte Klasse")
+    cm.GetYaxis().SetTitle("wahre Klasse")
 
     cm.SetMarkerColor(ROOT.kWhite)
 
@@ -198,7 +212,7 @@ def drawConfusionMatrixOnCanvas(matrix, canvasName, catLabel, ROC = None, ROCerr
     t = canvas.GetTopMargin()
 
     # add category label
-    latex.DrawLatex(l,1.-t+0.01, catLabel)
+    # latex.DrawLatex(l,1.-t+0.01, catLabel)
 
     if privateWork:
         latex.DrawLatex(l, 1.-t+0.04, "CMS private work")
@@ -257,21 +271,29 @@ def drawClosureTestOnCanvas(sig_train, bkg_train, sig_test, bkg_test, plotOption
     return canvas
 
 
-def drawHistsOnCanvas(sigHists, bkgHists, plotOptions, canvasName,displayname=None,logoption=False):
+def drawHistsOnCanvas(sigHists, bkgHists, plotOptions, canvasName, realDataHists=None, dataMcRatio=True, displayname=None,logoption=False, workdir=""):
     if not displayname:
         displayname=canvasName
-    if not isinstance(sigHists, list):
-        sigHists = [sigHists]
+    if sigHists:
+        if not isinstance(sigHists, list):
+            sigHists = [sigHists]
     if not isinstance(bkgHists, list):
         bkgHists = [bkgHists]
+    if realDataHists:
+        if not isinstance(realDataHists, list):
+            realDataHists = [realDataHists]
 
-    canvas = getCanvas(canvasName, plotOptions["ratio"])
+    canvas = getCanvas(canvasName, ratiopad=plotOptions["ratio"], dataMcRatio=dataMcRatio)
 
     # move over/underflow bins into plotrange
     for h in bkgHists:
         moveOverUnderFlow(h)
-    for h in sigHists:
-        moveOverUnderFlow(h)
+    if sigHists:
+        for h in sigHists:
+            moveOverUnderFlow(h)
+    if realDataHists:
+        for h in realDataHists:
+            moveOverUnderFlow(h)
 
     # stack Histograms
     bkgHists = [bkgHists[len(bkgHists)-1-i] for i in range(len(bkgHists))]
@@ -287,8 +309,20 @@ def drawHistsOnCanvas(sigHists, bkgHists, plotOptions, canvasName,displayname=No
         if h.GetBinContent(h.GetMaximumBin()) > 0:
             yMinMax = min(h.GetBinContent(h.GetMaximumBin()), yMinMax)
 
+    if realDataHists:
+        for h in realDataHists:
+            yMax = max(h.GetBinContent(h.GetMaximumBin()), yMax)
+            if h.GetBinContent(h.GetMaximumBin()) > 0:
+                yMinMax = min(h.GetBinContent(h.GetMaximumBin()), yMinMax)
+    if sigHists:
+        for h in sigHists:
+            yMax = max(h.GetBinContent(h.GetMaximumBin()), yMax)
+            if h.GetBinContent(h.GetMaximumBin()) > 0:
+                yMinMax = min(h.GetBinContent(h.GetMaximumBin()), yMinMax)
+
+
     # draw the first histogram
-    if len(bkgHists) == 0:
+    if sigHists:
         firstHist = sigHists[0]
     else:
         firstHist = bkgHists[0]
@@ -312,9 +346,71 @@ def drawHistsOnCanvas(sigHists, bkgHists, plotOptions, canvasName,displayname=No
 
 
     # draw signal histograms
-    for sH in sigHists:
-        # draw signal histogram
-        sH.DrawCopy(option+" E0 same")
+    if sigHists:
+        for sH in sigHists:
+            # draw signal histogram
+            sH.DrawCopy(option+" E0 same")
+
+    #draw real data histograms
+    if realDataHists:
+        for rD in realDataHists:
+            rD.DrawCopy(option+'E0 same')
+
+
+    ### plot ratio between real Data and simulated data in the analysis AtlasOpenData2012
+    if dataMcRatio:
+
+        #hardcoded histogram combination
+        canvas.cd(2)
+        realDataHist = realDataHists[0]
+
+        MCHist = bkgHists[0]        #the first bkgHist is enoug because they are stacked on each other
+        # if len(sigHists) == 1:
+        #     MCHist.Add(sigHists[0])
+    
+       
+        realDataHist.Divide(MCHist)
+        realDataHist.GetYaxis().SetTitle("Daten/MC")
+        realDataHist.SetMaximum(1.4)
+        realDataHist.SetMinimum(0.6)
+        # for i in range(realDataHist.GetNbinsX()+1):    #make errorbars invisible
+        #     # realDataHist.SetBinContent(i, 1)
+        #     realDataHist.SetBinError(i, 0.000001)
+        realDataHist.Draw("P")
+
+        # save bin information of data/MC histogram to text file
+        if workdir:
+            # get bin content
+            nbins = realDataHist.GetXaxis().GetNbins()
+            bin_contents = []
+            for i in range(nbins):
+                bin_content = realDataHist.GetBinContent(i+1)
+                bin_contents.append(bin_content)
+
+            #save to file
+            str_to_file = str(workdir)+"/data_mc_ratios.csv"
+            if not os.path.isfile(str_to_file):
+                df = pd.DataFrame()
+                df[canvasName] = bin_contents
+                df.to_csv(str_to_file, index=False)
+            else:
+                df1 = pd.read_csv(str_to_file)
+                df2 = pd.DataFrame()
+                df2[canvasName] = bin_contents
+                df = pd.concat([df1, df2], axis=1)
+                df.to_csv(str_to_file, index=False)
+
+            # LEGACY saving
+            # file = open(str(workdir)+"/data_mc_ratios.txt","a")
+            # file.write(canvasName+"\n")
+            # file.write(str(bin_contents)+"\n") 
+            # file.close()
+
+
+
+
+
+
 
 
     if plotOptions["ratio"]:
@@ -351,6 +447,8 @@ def drawHistsOnCanvas(sigHists, bkgHists, plotOptions, canvasName,displayname=No
             ROOT.gStyle.SetErrorX(0)
             ratioPlot.DrawCopy("sameP")
         canvas.cd(1)
+
+    canvas.cd(1)
     return canvas
 
 
@@ -358,25 +456,28 @@ def drawHistsOnCanvas(sigHists, bkgHists, plotOptions, canvasName,displayname=No
 # ===============================================
 # GENERATE CANVAS AND LEGENDS
 # ===============================================
-def getCanvas(name, ratiopad = False):
-    if ratiopad:
-        canvas = ROOT.TCanvas(name, name, 1024, 1024)
+def getCanvas(name, ratiopad = False, dataMcRatio=False):
+    #function changed for the atlas OpenData 2012 bachelor thesis
+    if ratiopad or dataMcRatio:                         
+        canvas = ROOT.TCanvas(name, name, 1024, 1300)
         canvas.Divide(1,2)
         canvas.cd(1).SetPad(0.,0.3,1.0,1.0)
-        canvas.cd(1).SetTopMargin(0.07)
-        canvas.cd(1).SetBottomMargin(0.0)
+        canvas.cd(1).SetTopMargin(0.2)
+        canvas.cd(1).SetBottomMargin(0.05)
 
         canvas.cd(2).SetPad(0.,0.0,1.0,0.3)
-        canvas.cd(2).SetTopMargin(0.0)
+        canvas.cd(2).SetTopMargin(0.1)
         canvas.cd(2).SetBottomMargin(0.4)
 
         canvas.cd(1).SetRightMargin(0.05)
-        canvas.cd(1).SetLeftMargin(0.15)
+        canvas.cd(1).SetLeftMargin(0.22)
         canvas.cd(1).SetTicks(1,1)
 
         canvas.cd(2).SetRightMargin(0.05)
-        canvas.cd(2).SetLeftMargin(0.15)
+        canvas.cd(2).SetLeftMargin(0.22)
         canvas.cd(2).SetTicks(1,1)
+
+        canvas.cd(2).SetGrid()
     else:
         canvas = ROOT.TCanvas(name, name, 1024, 768)
         canvas.SetTopMargin(0.07)
@@ -388,7 +489,7 @@ def getCanvas(name, ratiopad = False):
     return canvas
 
 def getLegend():
-    legend=ROOT.TLegend(0.70,0.6,0.95,0.9)
+    legend=ROOT.TLegend(0.70,0.53,0.95,0.75)
     legend.SetBorderSize(0);
     legend.SetLineStyle(0);
     legend.SetTextFont(42);
@@ -406,37 +507,39 @@ def saveCanvas(canvas, path):
 # PRINT STUFF ON CANVAS
 # ===============================================
 def printLumi(pad, lumi = 41.5, ratio = False, twoDim = False):
-    if lumi == 0.: return
+    pass
+    # if lumi == 0.: return
 
-    lumi_text = str(lumi)+" fb^{-1} (13 TeV)"
+    # lumi_text = str(lumi)+" fb^{-1} (13 TeV)"
 
-    pad.cd(1)
-    l = pad.GetLeftMargin()
-    t = pad.GetTopMargin()
-    r = pad.GetRightMargin()
-    b = pad.GetBottomMargin()
+    # pad.cd(1)
+    # l = pad.GetLeftMargin()
+    # t = pad.GetTopMargin()
+    # r = pad.GetRightMargin()
+    # b = pad.GetBottomMargin()
 
-    latex = ROOT.TLatex()
-    latex.SetNDC()
-    latex.SetTextColor(ROOT.kBlack)
+    # latex = ROOT.TLatex()
+    # latex.SetNDC()
+    # latex.SetTextColor(ROOT.kBlack)
 
-    if twoDim:  latex.DrawLatex(l+0.40,1.-t+0.01,lumi_text)
-    elif ratio: latex.DrawLatex(l+0.60,1.-t+0.04,lumi_text)
-    else:       latex.DrawLatex(l+0.53,1.-t+0.02,lumi_text)
+    # if twoDim:  latex.DrawLatex(l+0.40,1.-t+0.01,lumi_text)
+    # elif ratio: latex.DrawLatex(l+0.60,1.-t+0.04,lumi_text)
+    # else:       latex.DrawLatex(l+0.53,1.-t+0.02,lumi_text)
 
 def printCategoryLabel(pad, catLabel, ratio = False):
-    pad.cd(1)
-    l = pad.GetLeftMargin()
-    t = pad.GetTopMargin()
-    r = pad.GetRightMargin()
-    b = pad.GetBottomMargin()
+    pass
+    # pad.cd(1)
+    # l = pad.GetLeftMargin()
+    # t = pad.GetTopMargin()
+    # r = pad.GetRightMargin()
+    # b = pad.GetBottomMargin()
 
-    latex = ROOT.TLatex()
-    latex.SetNDC()
-    latex.SetTextColor(ROOT.kBlack)
+    # latex = ROOT.TLatex()
+    # latex.SetNDC()
+    # latex.SetTextColor(ROOT.kBlack)
 
-    if ratio:   latex.DrawLatex(l+0.07,1.-t-0.04, catLabel)
-    else:       latex.DrawLatex(l+0.02,1.-t-0.06, catLabel)
+    # if ratio:   latex.DrawLatex(l+0.07,1.-t-0.04, catLabel)
+    # else:       latex.DrawLatex(l+0.02,1.-t-0.06, catLabel)
 
 def printROCScore(pad, ROC, ratio = False):
     pad.cd(1)

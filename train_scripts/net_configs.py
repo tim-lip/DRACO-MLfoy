@@ -2,6 +2,19 @@ from tensorflow.keras import optimizers
 
 config_dict = {}
 
+config_dict["ttbar_AtlasOpenData2012_multiclassing"] = {
+        "layers":                   [70,70],
+        "loss_function":            "categorical_crossentropy",
+        "Dropout":                  0.5,
+        "L2_Norm":                  1e-5,
+        "batch_size":               5000,
+        "optimizer":                optimizers.Adam(1e-4),
+        "activation_function":      "elu",
+        "output_activation":        "softmax",
+        "earlystopping_percentage": 0.05,
+        "earlystopping_epochs":     30,
+        }
+      
 config_dict["example_config"] = {
         "layers":                   [200,200],
         "loss_function":            "categorical_crossentropy",

@@ -29,36 +29,29 @@ class Sample:
                 df = store.select("data")
                 samp = int(df.shape[0]*1.0)
                 df = df.head(samp)
-                print("number of events before selections: "+str(df.shape[0]))
+                print("number of events : "+str(df.shape[0]))
         else:
             df = self.get_mixed_df()
             print("number of events before selections: "+str(df.shape[0]))
 
-        # apply event category cut
-        query = event_category
-
-        if not evenSel == "":
-            query+=" and "+evenSel
-        df.query(query, inplace = True)
-        print("number of events after selections:  "+str(df.shape[0]))
         self.nevents = df.shape[0]
 
-        # add event weight
+        # add event weight:
         df = df.assign(total_weight = lambda x: eval(self.total_weight_expr))
 
         # assign train weight
         weight_sum = sum(df["total_weight"].values)
         df = df.assign(train_weight = lambda x: x.total_weight/weight_sum*self.train_weight)
+
         print("sum of train weights: {}".format(sum(df["train_weight"].values)))
 
         if self.addSampleSuffix in self.label:
             df["class_label"] = pd.Series([ c + self.addSampleSuffix for c in df["class_label"].values], index = df.index)
 
         # add lumi weight
-        # adjust weights via 1/test_percentage such that yields in plots correspond to complete dataset
-
-        df = df.assign(lumi_weight = lambda x: x.total_weight * lumi * self.train_weight * self.normalization_weight / self.test_percentage)
-        print("sum of lumi weights: {}".format(sum(df["lumi_weight"].values)))
+        # adjust weights via 1/test_percentage such that yields in plots correspond to complete dataset (not needed here)
+        # factor 1.06 comes from an offset between simulated and real data
+        df = df.assign(lumi_weight = lambda x: x.total_weight * self.train_weight * self.normalization_weight * 1.06) # / self.test_percentage)
         self.data = df
         print("-"*50)
 
@@ -212,9 +205,40 @@ class DataFrame(object):
             sample.load_dataframe(self.event_category, self.lumi, self.evenSel, self.sys_variation)
             train_samples.append(sample.data)
 
-        # concatenating all dataframes
+        # concatenating all dataframes (except real data)
         df = pd.concat(train_samples, sort=True)
         del train_samples
+
+
+        # import real data for testing to self.df_real_data (hardcoded for atlasOpenData2012 analysis)
+        print('-'*50) 
+        print('loading real data '+input_samples.input_path+'/Data_dnn.h5')
+        df_real_data = pd.read_hdf(input_samples.input_path+'/Data_dnn.h5', key='data')
+
+        # labeling real data
+        df_real_data["domain_label"] = [[1, 0] for i in range(df_real_data.shape[0])]
+        df_real_data["domain_index"] = [0 for i in range(df_real_data.shape[0])]
+        df_real_data["index_label"]  = [-1 for i in range(df_real_data.shape[0])]
+        df_real_data["label_categorical"] = [[0,0,0,0] for i in range(df_real_data.shape[0])]
+        df_real_data["class_label"] = ["real_data" for i in range(df_real_data.shape[0])]
+
+        # assigning weight (train weight = 0 because the unlabeled real data cannot be used for classification training)
+        df_real_data["train_weight"] = [0 for i in range(df_real_data.shape[0])] 
+        df_real_data["domain_weight"] = [1 for i in range(df_real_data.shape[0])]
+
+        self.df_real_data = df_real_data
+
+        # print some real data stats
+        print('sum of realData weights: {}'.format(sum(df_real_data["train_weight"].values)))
+        print('number of real data events: '+str(df_real_data.shape[0]))
+        print('-'*50)
+
+        # generate artificial real data to have enough if domain adaptation is used 
+        # self.ratio_scalefactor = df.shape[0]/df_real_data.shape[0]
+        # df_real_data = df_real_data.sample(replace=True, frac=self.ratio_scalefactor)
+        # when no artificial real data is used, use:
+        self.ratio_scalefactor = 1
+
 
         # multiclassification labelling
         if not self.binary_classification:
@@ -230,8 +254,8 @@ class DataFrame(object):
             self.index_classes = [self.class_translation[c] for c in self.classes]
 
             # add flag for ttH and ttbb to dataframe
-            df["is_ttH"] = pd.Series( [1 if ("ttH" in c)  else 0 for c in df["class_label"].values], index = df.index )
-            df["is_ttBB"] = pd.Series( [1 if ("ttbb" in c) else 0 for c in df["class_label"].values], index = df.index )
+            # df["is_ttH"] = pd.Series( [1 if ("ttH" in c)  else 0 for c in df["class_label"].values], index = df.index )
+            # df["is_ttBB"] = pd.Series( [1 if ("ttbb" in c) else 0 for c in df["class_label"].values], index = df.index )
 
             # add generator flag for adversary training
             if input_samples.additional_samples:
@@ -240,16 +264,34 @@ class DataFrame(object):
                 df["index_label"] = pd.Series( [self.class_translation[c[:-len(self.addSampleSuffix)]] if (c.endswith(self.addSampleSuffix)) 
                     else self.class_translation[c] for c in df["class_label"].values], index = df.index )
             else:
-                df["index_label"] = pd.Series( [self.class_translation[c] for c in df["class_label"].values], index = df.index )   
+                df["index_label"] = pd.Series( [self.class_translation[c] for c in df["class_label"].values], index = df.index )
+
+            # some stuff needed for domain adaptation
+                ### ugly costum label generator because for some reason the "to_categorical"-function from keras did not work
+            def make_label(i):
+                label = [0,0,0,0]
+                label[i] = 1
+                return label
+            df["label_categorical"] = [make_label(i) for i in df["index_label"].values]
+
+                # add domain label 1 for simulated data
+            df['domain_label'] = [[0, 1] for i in range(df.shape[0])]
+            df["domain_index"] = [1 for i in range(df.shape[0])]
+
             # norm weights to mean(1) 
-            # TODO: adjust train_weights for adversary training (processes with different samples from different generators)
             df["train_weight"] = df["train_weight"]*df.shape[0]/len(self.classes)
+
+            # add domain weight
+            if self.ratio_scalefactor == 1:
+                df["domain_weight"] = df["train_weight"]
+            else:
+                df["domain_weight"] = [1 for i in range(df.shape[0])]
 
             # save some meta data about network
             self.n_input_neurons = len(train_variables)
             self.n_output_neurons = len(self.classes)-input_samples.additional_samples
 
-        # binary classification labelling
+        # binary classification labelling (does not work for this fork of DRACO)
         else:
 
             # class translations
@@ -282,8 +324,8 @@ class DataFrame(object):
             sig_df["train_weight"] = sig_df["train_weight"]/(2*signal_weight)*df.shape[0]
             bkg_df["train_weight"] = bkg_df["train_weight"]/(2*bkg_weight)*df.shape[0]
 
-            #sig_df["class_label"] = "sig"
-            #bkg_df["class_label"] = "bkg"
+            sig_df["class_label"] = "sig"
+            bkg_df["class_label"] = "bkg"
             sig_df["binaryTarget"] = 1.
             bkg_df["binaryTarget"] = float(self.bkg_target)
 
@@ -297,13 +339,12 @@ class DataFrame(object):
             self.n_input_neurons = len(train_variables)
             self.n_output_neurons = 1
 
-        # shuffle dataframe
-        if not self.shuffleSeed:
-           self.shuffleSeed = np.random.randint(low = 0, high = 2**16)
+        # concatenate data from different domains
+        df = pd.concat([df, df_real_data], sort=False)
+        self.unsplit_df = df.copy()
 
-        print("using shuffle seed {} to shuffle input data".format(self.shuffleSeed))
-
-        df = shuffle(df, random_state = self.shuffleSeed)
+        # apply scaling of real data so that the simulated data fits into the real data
+        df["histScaling"] = df["histScaling"]*self.ratio_scalefactor
 
         # norm variables if activated
         unnormed_df = df.copy()
@@ -331,7 +372,11 @@ class DataFrame(object):
         df[train_variables] = (df[train_variables] - df[train_variables].mean())/df[train_variables].std()
         self.norm_csv = norm_csv
 
-        self.unsplit_df = df.copy()
+        # shuffle dataframe
+        if not self.shuffleSeed:
+           self.shuffleSeed = np.random.randint(low = 0, high = 2**16)
+        print("using shuffle seed {} to shuffle input data".format(self.shuffleSeed))
+        df = shuffle(df, random_state = self.shuffleSeed)
 
         # split test sample
         n_test_samples = int( df.shape[0]*test_percentage)
@@ -358,20 +403,6 @@ class DataFrame(object):
         print("events used for training: "+str(self.df_train.shape[0]))
         print("events used for testing:  "+str(self.df_test.shape[0]))
         del df
-
-    #     # init non trainable samples
-    #     self.non_train_samples = None
-
-    # def get_non_train_samples(self):
-    #     # get samples with flag 'isTrainSample == False' and load those
-    #     samples = []
-    #     for sample in self.input_samples.samples:
-    #         if sample.isTrainSample: continue
-    #         sample.data[self.train_variables] = (sample.data[self.train_variables] - self.norm_csv["mu"])/(self.norm_csv["std"])
-    #         samples.append(sample)
-    #     self.non_train_samples = samples
-
-
 
     def balanceTrainSample(self):
         # get max number of events per sample
@@ -417,10 +448,19 @@ class DataFrame(object):
     def get_train_weights(self):
         return self.df_train["train_weight"].values
 
+    def get_df_train_length(self):
+        return self.df_train.shape[0]
+
     def get_train_labels(self, as_categorical = True):
         if self.binary_classification: return self.df_train["binaryTarget"].values
-        if as_categorical: return to_categorical( self.df_train["index_label"].values )
+        if as_categorical: return np.array(self.df_train["label_categorical"].values.tolist())
         else:              return self.df_train["index_label"].values
+
+    def get_train_domain_labels(self):
+        return np.array(self.df_train["domain_label"].values.tolist())
+
+    def get_train_domain_weights(self):
+        return self.df_train["domain_weight"].values
 
     def get_train_lumi_weights(self):
         return self.df_train["lumi_weight"].values
@@ -438,19 +478,34 @@ class DataFrame(object):
     def get_test_weights(self):
         return self.df_test["total_weight"].values
 
+    def get_test_domain_weights(self):
+        return self.df_test["domain_weight"].values
+
     def get_lumi_weights(self):
         return self.df_test["lumi_weight"].values
 
+    def get_hist_scaling(self):
+        return self.df_test["histScaling"].values
+
     def get_test_labels(self, as_categorical = True):
         if self.binary_classification: return self.df_test["binaryTarget"].values
-        if as_categorical: return to_categorical( self.df_test["index_label"].values )
+        if as_categorical: return np.array(self.df_test["label_categorical"].values.tolist())
         else:              return self.df_test["index_label"].values
+
+    def get_test_domain_labels(self, as_categorical = False):
+        if as_categorical: return np.array(self.df_test["domain_label"].values.tolist())
+        else:              return self.df_test["domain_index"].values
 
     def get_class_flag(self, class_label):
         return pd.Series( [1 if c==class_label else 0 for c in self.df_test["class_label"].values], index = self.df_test.index ).values
 
     def get_ttH_flag(self):
         return self.df_test["is_ttH"].values
+
+    # real data ----------------------------------
+    def get_real_data(self, as_matrix=True):
+        if as_matrix:  return self.df_real_data[ self.train_variables ].values
+        else:          return self.df_real_data[ self.train_variables ]
 
     # full sample ----------------------------------
     def get_full_df(self):

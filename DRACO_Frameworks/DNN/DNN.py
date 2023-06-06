@@ -26,12 +26,16 @@ import tensorflow.keras as keras
 import tensorflow.keras.optimizers as optimizers
 import tensorflow.keras.models as models
 import tensorflow.keras.layers as layer
+import tensorflow.keras.losses as losses
 from tensorflow.keras import backend as K
 import pandas as pd
 
+import utils.flipGradientTF as flip_grad
+
 # Limit gpu usage
 import tensorflow as tf
-
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 tf.compat.v1.disable_eager_execution()
@@ -76,7 +80,8 @@ class EarlyStopping(keras.callbacks.Callback):
 
         # check loss by percentage difference
         if self.value:
-            if (current_val-current_train)/(current_train) > self.value and epoch > self.min_epochs:
+            print(abs(current_val-current_train)/(current_train))
+            if abs(current_val-current_train)/(current_train) > self.value and epoch > self.min_epochs:
                 if self.verbose > 0:
                     print("\nEpoch {}: early stopping threshold reached".format(epoch))
                 self.n_failed += 1
@@ -85,6 +90,7 @@ class EarlyStopping(keras.callbacks.Callback):
 
         # check loss by validation performance increase
         if self.stopping_epochs:
+            print(self.best_epoch + self.stopping_epochs, epoch)
             if self.best_epoch + self.stopping_epochs < epoch and epoch > self.min_epochs:
                 if self.verbose > 0:
                     print("\nValidation loss has not decreased for {} epochs".format( epoch - self.best_epoch ))
@@ -106,11 +112,15 @@ class DNN():
             shuffle_seed       = None,
             balanceSamples     = False,
             evenSel            = None,
-            addSampleSuffix    = ""):
+            addSampleSuffix    = "",
+            domain_adaptation  = False,
+            grad_reversal_lambda = 1):
 
         # save some information
         # list of samples to load into dataframe
         self.input_samples = input_samples
+        self.domain_adaptation = domain_adaptation
+        self.grad_reversal_lambda = grad_reversal_lambda
 
         # suffix of additional (ttbb) sample
         self.addSampleSuffix = addSampleSuffix
@@ -177,9 +187,18 @@ class DNN():
         if not os.path.exists(self.plot_path):
             os.makedirs(self.plot_path)
 
+        # make domain plotdir
+        if self.domain_adaptation:
+            self.domain_plot_path = self.save_path+"/domain_plots/"
+            if not os.path.exists(self.domain_plot_path):
+                os.makedirs(self.domain_plot_path)
+
         # layer names for in and output (needed for c++ implementation)
         self.inputName = "inputLayer"
         self.outputName = "outputLayer"
+
+        # dictionary for some domain adaptation information saving
+        self.da_information = {}
 
     def logarithmic(self, array):
         indices = [i for i, x in enumerate(array) if x <= 0]
@@ -271,6 +290,81 @@ class DNN():
             print("-------------------->")
 
 
+    def build_domain_adaptation_model(self):
+        ''' build default DNN from architecture dictionary with additional gradient reversal layer'''
+
+        # infer number of input neurons from number of train variables
+        number_of_input_neurons     = self.data.n_input_neurons
+
+        # get all the architecture settings needed to build model
+        number_of_neurons_per_layer = self.architecture["layers"]
+        dropout                     = self.architecture["Dropout"]
+        activation_function         = self.architecture["activation_function"]
+        if activation_function == "leakyrelu":
+            activation_function = "linear"
+        l2_regularization_beta      = self.architecture["L2_Norm"]
+        #l1_regularization_beta      = self.architecture["L1_Norm"]
+        output_activation           = self.architecture["output_activation"]
+
+        # define input layer
+        Inputs = keras.layers.Input(
+            shape = (number_of_input_neurons,),
+            name  = self.inputName)
+        X = Inputs
+        self.layer_list = [X]
+
+        # loop over dense layers
+        for iLayer, nNeurons in enumerate(number_of_neurons_per_layer):
+            X = keras.layers.Dense(
+                units               = nNeurons,
+                activation          = activation_function,
+                kernel_regularizer  = keras.regularizers.l2(l2_regularization_beta),
+                name                = "DenseLayer_"+str(iLayer)
+                )(X)
+
+            if self.architecture["activation_function"] == "leakyrelu":
+                X = keras.layers.LeakyReLU(alpha=0.3)(X)
+
+            # add dropout percentage to layer if activated
+            if not dropout == 0:
+                X = keras.layers.Dropout(dropout, name = "DropoutLayer_"+str(iLayer))(X)
+
+        # generate output layer
+        # class end
+        classX = keras.layers.Dense(units=50, activation=activation_function)(X)
+        classX = keras.layers.Dropout(dropout, name="DropoutLayer_class1")(classX)
+        classX = keras.layers.Dense(units=50, activation=activation_function)(classX)
+        classX = keras.layers.Dropout(dropout, name="DropoutLayer_class2")(classX)
+        classX = keras.layers.Dense(units=50, activation=activation_function)(classX)
+        classX = keras.layers.Dropout(dropout, name="DropoutLayer_class3")(classX)
+        class_out = keras.layers.Dense(
+            units               = self.data.n_output_neurons,
+            activation          = output_activation.lower(),
+            kernel_regularizer  = keras.regularizers.l2(l2_regularization_beta),
+            name                = "class_output"
+            )(classX)
+
+        # domain end
+        Flip = flip_grad.GradientReversal(self.grad_reversal_lambda)
+        flip_layer = Flip(X)
+        # domainX = keras.layers.Dense(units=50, activation=activation_function)(flip_layer)
+        # domainX = keras.layers.Dropout(dropout, name="DropoutLayer_domain1")(domainX)
+        # domainX = keras.layers.Dense(units=50, activation=activation_function)(domainX)
+        # domainX = keras.layers.Dropout(dropout, name="DropoutLayer_domain2")(domainX)
+        # domainX = keras.layers.Dense(units=50, activation=activation_function)(domainX)
+        # domainX = keras.layers.Dropout(dropout, name="DropoutLayer_domain3")(domainX)
+        domain_out = keras.layers.Dense(
+            units               =2, 
+            activation          =output_activation.lower(), 
+            name                ="domain_output"
+            )(X)
+
+        # define model
+        model = models.Model(inputs = [Inputs], outputs = [class_out, domain_out])
+        model.summary()
+
+        return model
+
     def build_default_model(self):
         ''' build default straight forward DNN from architecture dictionary '''
 
@@ -327,18 +421,34 @@ class DNN():
     def build_model(self, config = None, model = None, penalty = None):
         ''' build a DNN model
             use options defined in 'config' dictionary '''
-
         if config:
             self._load_architecture(config)
             print("loading non default net configs")
 
-        if model == None:
-            print("building model from config")
-            model = self.build_default_model()
+        if model == None:            
+            if self.domain_adaptation:
+                print("building domain adaptation model")
+                model = self.build_domain_adaptation_model()
+            else:
+                print("building model from config")
+                model = self.build_default_model()
+
+        # def custom_loss(y_true, y_pred):
+        #     loss = losses.sparse_categorical_crossentropy(y_true, y_pred) 
+        #     loss = tf.Print(loss, [loss], "Inside loss function")
+        #     bool_mask = K.flatten(K.equal(y_true, -1))
+        #     return K.switch(bool_mask, K.zeros_like(loss), loss)
+
+        # def custom_loss2(y_true, y_pred):
+        #     idx  = tf.not_equal(y_true, 7)
+        #     y_true = tf.boolean_mask(y_true, idx)
+        #     y_pred = tf.boolean_mask(y_pred, idx)
+        #     return losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True, axis=-1)
 
         # compile the model
         model.compile(
             loss        = self.architecture["loss_function"],
+            #loss        = custom_loss,
             optimizer   = self.architecture["optimizer"],
             metrics     = self.eval_metrics)
 
@@ -350,6 +460,7 @@ class DNN():
         yml_model   = self.model.to_yaml()
         with open(out_file, "w") as f:
             f.write(yml_model)
+
 
     def train_model(self):
         ''' train the model '''
@@ -364,16 +475,31 @@ class DNN():
                 stopping_epochs = self.architecture["earlystopping_epochs"],
                 verbose         = 1)]
 
-        # train main net
-        self.trained_model = self.model.fit(
-            x = self.data.get_train_data(as_matrix = True),
-            y = self.data.get_train_labels(),
-            batch_size          = self.architecture["batch_size"],
-            epochs              = self.train_epochs,
-            shuffle             = True,
-            callbacks           = callbacks,
-            validation_split    = 0.25,
-            sample_weight       = self.data.get_train_weights())
+        # train main net    
+        if self.domain_adaptation:
+            self.trained_model = self.model.fit(
+                x = self.data.get_train_data(as_matrix = True),
+                y = [self.data.get_train_labels(as_categorical = True), self.data.get_train_domain_labels()],
+                batch_size          = self.architecture["batch_size"],
+                epochs              = self.train_epochs,
+                shuffle             = True,
+                callbacks           = callbacks,
+                validation_split    = 0.25,
+                sample_weight       = {"class_output": self.data.get_train_weights(), "domain_output": self.data.get_train_domain_weights()}, 
+                verbose             = 2
+                )
+        else: 
+            self.trained_model = self.model.fit(
+                x = self.data.get_train_data(as_matrix = True),
+                y = self.data.get_train_labels(as_categorical = True),
+                batch_size          = self.architecture["batch_size"],
+                #batch_size          = self.data.get_df_train_length(),
+                epochs              = self.train_epochs,
+                shuffle             = True,
+                callbacks           = callbacks,
+                validation_split    = 0.25,
+                sample_weight       = self.data.get_train_weights())
+
 
     def save_model(self, argv, execute_dir, netConfigName, get_gradients = True):
         ''' save the trained model '''
@@ -389,7 +515,7 @@ class DNN():
         # save model as h5py file
         out_file = self.cp_path + "/trained_model.h5py"
         self.model.save(out_file, save_format='h5')
-        print("saved trained model at "+str(out_file))
+        print("saved trained model as h5 at "+str(out_file))
 
         # save config of model
         model_config = self.model.get_config()
@@ -460,41 +586,99 @@ class DNN():
         if get_gradients:
             pickle.dump(self.data.get_test_data(), open(self.cp_path+"/inputvariables.pickle", "wb"))
 
+        #save predictions to dataframe for later plotting (hardcoded and LEGACY)
+        net_results_df = pd.DataFrame()
+            #general information
+        net_results_df["class_name"] = self.data.df_test["class_label"]
+        net_results_df["class_label_index"] = self.data.df_test["index_label"]
+        net_results_df["class_label_categorical"] = self.data.df_test["label_categorical"]
+        net_results_df["domain_label_index"] = self.data.df_test["domain_index"]
+        net_results_df["domain_label_categorical"] = self.data.df_test["domain_label"]
+            #net predictions
+        net_results_df["class_prediction_vector"] = [np.array(i) for i in self.model_prediction_vector]
+        net_results_df["domain_prediction_vector"] = [np.array(i) for i in self.model_domain_prediction_vector]
+        net_results_df["predicted_class"] = self.predicted_classes
+        net_results_df["predicted_domain"] = self.predicted_domain
+            #weights and scalefactors
+        net_results_df["class_weights"] = self.data.df_test["lumi_weight"]
+        net_results_df["hist_scaling_weights"] = self.data.df_test["histScaling"]
+
+        net_results_df.to_hdf(self.cp_path+"/net_results_df.h5", key='results', mode='w')
+
+
 
     def eval_model(self):
         ''' evaluate trained model '''
 
         # evaluate test dataset
-        self.model_eval = self.model.evaluate(
-            self.data.get_test_data(as_matrix = True),
-            self.data.get_test_labels())
+        if self.domain_adaptation:
+            self.model_eval = self.model.evaluate(
+                self.data.get_test_data(as_matrix = True),
+                [self.data.get_test_labels(), self.data.get_test_domain_labels(as_categorical = True)], 
+                verbose=0)
+        else:
+            self.model_eval = self.model.evaluate(
+                self.data.get_test_data(as_matrix = True),
+                self.data.get_test_labels(as_categorical = True))
 
         # save history of eval metrics
         self.model_history = self.trained_model.history
 
-        # save predicitons
-        self.model_prediction_vector = self.model.predict(self.data.get_test_data (as_matrix = True))
-        self.model_train_prediction  = self.model.predict(self.data.get_train_data(as_matrix = True))
+        # save predictions
+        if not self.domain_adaptation:
+            self.model_prediction_vector = self.model.predict(self.data.get_test_data (as_matrix = True))
+            self.model_train_prediction = self.model.predict(self.data.get_train_data(as_matrix = True))
+        else:
+            self.model_prediction_vector, self.model_domain_prediction_vector = self.model.predict(self.data.get_test_data (as_matrix = True))
+            self.model_train_prediction, self.model_domain_train_prediction = self.model.predict(self.data.get_train_data(as_matrix = True))
+
+        # code when real data is not included in training
+        # self.helper_predict = np.concatenate((self.model_prediction_vector, self.model.predict(self.data.get_real_data(as_matrix = True))))
         
         #figure out ranges
         self.get_ranges()
 
         # save predicted classes with argmax
-        self.predicted_classes = np.argmax( self.model_prediction_vector, axis = 1)
+        self.predicted_classes = np.argmax(self.model_prediction_vector, axis = 1)
+        if self.domain_adaptation:
+            self.predicted_domain = np.argmax(self.model_domain_prediction_vector, axis = 1)
 
-        # save confusion matrix
+        # split data so that only labaled data is used for confusion matrix
+        domain_labels = self.data.get_test_domain_labels()
+        test_index = self.data.get_test_labels(as_categorical = False)
+        test_class_labels = self.data.get_test_labels(as_categorical = True)
+        # for confusion matrix
+        self.eval_indices = [test_index[k] for k in range(test_index.shape[0]) if domain_labels[k] == 1]
+        self.eval_classes = [self.predicted_classes[k] for k in range(test_index.shape[0]) if domain_labels[k] == 1]
+        # for roc auc score
+        self.eval_class_labels = np.array([test_class_labels[k,:] for k in range(test_index.shape[0]) if domain_labels[k] == 1])
+        self.eval_prediction_vector = np.array([self.model_prediction_vector[k,:] for k in range(test_index.shape[0]) if domain_labels[k] == 1])
+
+        # save confusion matrix 
         from sklearn.metrics import confusion_matrix
-        self.confusion_matrix = confusion_matrix(self.data.get_test_labels(as_categorical = False), self.predicted_classes)
+        self.confusion_matrix = confusion_matrix(self.eval_indices, self.eval_classes)
+
+        # norm matrix and print diagonals
+        new_matrix = np.empty( (self.data.n_output_neurons, self.data.n_output_neurons), dtype = np.float64)
+        for yit in range(self.data.n_output_neurons):
+            evt_sum = float(sum(self.confusion_matrix[yit,:]))
+            for xit in range(self.data.n_output_neurons):
+                new_matrix[yit,xit] = self.confusion_matrix[yit,xit]/(evt_sum+1e-9)
+ 
+        self.diagonals = [new_matrix[i,i] for i in range(new_matrix.shape[0])]
 
         # print evaluations
         from sklearn.metrics import roc_auc_score
-        self.roc_auc_score = roc_auc_score(self.data.get_test_labels(), self.model_prediction_vector)
+        #self.roc_auc_score = roc_auc_score(self.data.get_test_labels(as_categorical = True), self.model_prediction_vector)
+        self.roc_auc_score = roc_auc_score(self.eval_class_labels, self.eval_prediction_vector)
+
         print("\nROC-AUC score: {}".format(self.roc_auc_score))
 
         if self.eval_metrics:
             print("model test loss: {}".format(self.model_eval[0]))
             for im, metric in enumerate(self.eval_metrics):
                 print("model test {}: {}".format(metric, self.model_eval[im+1]))
+
 
     def get_ranges(self):
         if not self.data.binary_classification:
@@ -536,7 +720,7 @@ class DNN():
         # get weights
         for i, layer in enumerate(self.model.layers):
             #odd layers correspond to dropout layers
-            if ("Dropout" in layer.name or "leaky" in layer.name or "inputLayer" in layer.name):
+            if ("Dropout" in layer.name or "leaky" in layer.name or "inputLayer" in layer.name or "GradientReversal" in layer.name):
                 continue
             else:
                 weights = layer.get_weights()[0]
@@ -766,8 +950,15 @@ class DNN():
         plt.rc('text', usetex=True)
 
         ''' plot history of loss function and evaluation metrics '''
-        metrics = ["loss"]
-        if self.eval_metrics: metrics += self.eval_metrics
+
+        if not self.domain_adaptation:
+            metrics = ["loss"]
+            if self.eval_metrics: metrics += self.eval_metrics
+        else:
+            # hardcoded for atlas 2012 analysis
+            metrics = ['loss', 'class_output_loss', 'domain_output_acc', 'domain_output_loss', 'class_output_acc']
+            metrics_german = {'loss': 'Loss-Funktion', 'class_output_loss': 'Loss-Funktion der Klassenerkennung', 
+            'domain_output_acc': 'Praezision der Domainerkennung', 'domain_output_loss': 'Loss-Funktion der Domainerkennung', 'class_output_acc': 'Praezision der Klassenerkennung'}
 
         # loop over metrics and generate matplotlib plot
         for metric in metrics:
@@ -780,22 +971,21 @@ class DNN():
             epochs = np.arange(1,n_epochs+1,1)
 
             # plot histories
-            plt.plot(epochs, train_history, "b-", label = "train", lw = 2)
-            plt.plot(epochs, val_history, "r-", label = "validation", lw = 2)
+            plt.plot(epochs, train_history, "b-", label = "Training", lw = 2)
+            plt.plot(epochs, val_history, "r-", label = "Validierung", lw = 2)
             if privateWork:
                 plt.title("CMS private work", loc = "left", fontsize = 16)
 
             # add title
-            title = self.category_label
-            title = title.replace("\\geq", "$\geq$")
-            title = title.replace("\\leq", "$\leq$")
-            plt.title(title, loc = "right", fontsize = 16)
+            # title = self.category_label
+            # title = title.replace("\\geq", "$\geq$")
+            # title = title.replace("\\leq", "$\leq$")
+            # plt.title(title, loc = "right", fontsize = 16)
 
             # make it nicer
             plt.grid()
-            plt.xlabel("epoch", fontsize = 16)
-            plt.ylabel(metric.replace("_"," "), fontsize = 16)
-            # plt.ylim(ymin=0.)
+            plt.xlabel("Epoche", fontsize = 16)
+            plt.ylabel(metrics_german[metric], fontsize = 16)
 
             # add legend
             plt.legend()
@@ -804,6 +994,47 @@ class DNN():
             out_path = self.save_path + "/model_history_"+str(metric)+".pdf"
             plt.savefig(out_path)
             print("saved plot of "+str(metric)+" at "+str(out_path))
+
+            #plot zoomed version of domain adaptation loss to visualize its increase
+            if metric == 'domain_output_loss' and len(train_history)>12:
+                ymin = min([min(train_history[10:]), min(val_history[10:])]) - 0.005
+                ymax = max([max(train_history[10:]), max(val_history[10:])]) + 0.005
+                plt.ylim(ymin,ymax)
+
+                # save
+                out_path = self.save_path + "/model_history_"+str(metric)+"_zoomed.pdf"
+                plt.savefig(out_path)
+                print("saved plot of "+str(metric)+"_zoomed at "+str(out_path))
+
+    def plot_domain_output(self):
+
+        '''print output of domain classifier if domain adaptation is used'''
+
+        domain_labels = self.data.get_test_domain_labels()
+        # self.predicted_domains = np.argmax(self.model_domain_prediction_vector, axis = 1)
+        real_events = [self.model_domain_prediction_vector[:,0][k] for k in range(domain_labels.shape[0]) if domain_labels[k] == 0] # and self.predicted_domains[k] == 0]
+        simulated_events = [self.model_domain_prediction_vector[:,0][k] for k in range(domain_labels.shape[0]) if domain_labels[k] == 1] # and self.predicted_domains[k] == 0]
+
+        weights = [self.data.ratio_scalefactor*self.data.get_test_domain_weights()[k]*self.data.get_hist_scaling()[k] for k in range(domain_labels.shape[0]) if domain_labels[k] == 1] # and self.predicted_domains[k] == 0]
+
+        # roc auc score
+        from sklearn.metrics import roc_auc_score
+        self.domain_roc_auc_score = roc_auc_score(self.data.get_test_domain_labels(as_categorical=True), self.model_domain_prediction_vector)
+
+
+        # plotting
+        plt.clf()
+        plt.hist([real_events, simulated_events], bins=30, label=["echte Daten", "simulierte Daten"], histtype="step")#, weights=[[1.0]*len(real_events), weights])
+        plt.title("ROC-AUC= {:.3f}".format(self.domain_roc_auc_score), loc = "right", fontsize = 16)
+        #plt.text(0.02, 10, "ROC AUC= {}".format(self.domain_roc_auc_score))
+        plt.grid()
+        plt.xlabel("Ausgabe des Domain Klassifizierers", fontsize = 16)
+        plt.ylabel("Anzahl Events", fontsize = 16)
+        plt.legend()
+
+        out_path = self.save_path + "/domain_output_node.pdf"
+        plt.savefig(out_path)
+        print("saved plot of domain_output_node at "+str(out_path))
 
     def plot_outputNodes(self, log = False, printROC = False, signal_class = None,
                         privateWork = False, nbins = 30, bin_range = [0.,1.],
@@ -824,6 +1055,26 @@ class DNN():
 
         plotNodes.plot(ratio = False, printROC = printROC, privateWork = privateWork)
 
+    def plot_domain_outputNodes(self, log = False, printROC = False, signal_class = None,
+                        privateWork = False, nbins = 30, bin_range = [0.,1.],
+                        sigScale = -1):
+
+        ''' plot distribution in outputNodes '''
+        plotNodes = plottingScripts.plotDomainOutputNodes(
+            data                = self.data,
+            prediction_vector   = self.model_domain_prediction_vector,
+            event_classes       = ["realData", "simulatedData"],
+            nbins               = nbins,
+            bin_range           = bin_range,
+            signal_class        = signal_class,
+            event_category      = self.category_label,
+            plotdir             = self.domain_plot_path,
+            logscale            = log,
+            sigScale            = sigScale)     
+
+        plotNodes.plot(ratio = False, printROC = printROC, privateWork = privateWork)
+
+    
     def plot_discriminators(self, log = False, printROC = False, privateWork = False,
                         signal_class = None, nbins = None, bin_range = None,
                         sigScale = -1):
@@ -846,7 +1097,7 @@ class DNN():
             logscale            = log,
             sigScale            = sigScale)
 
-        bkg_hist, sig_hist = plotDiscrs.plot(ratio = False, printROC = printROC, privateWork = privateWork)
+        bkg_hist, sig_hist = plotDiscrs.plot(ratio = False, printROC = printROC, privateWork = privateWork, da_information = self.da_information)
         #print("ASIMOV: mu=0: sigma (-+): ", self.binned_likelihood(bkg_hist, sig_hist, 0))
         #print("ASIMOV: mu=1: sigma (-+): ", self.binned_likelihood(bkg_hist, sig_hist, 1))
 
@@ -857,7 +1108,8 @@ class DNN():
             prediction_vector   = self.model_prediction_vector,
             event_classes       = self.event_classes,
             event_category      = self.category_label,
-            plotdir             = self.save_path)
+            plotdir             = self.save_path,
+            existing_matrix     = self.confusion_matrix)
 
         plotCM.plot(norm_matrix = norm_matrix, privateWork = privateWork, printROC = printROC)
 
@@ -884,7 +1136,7 @@ class DNN():
 
         closureTest.plot(ratio = False, privateWork = privateWork)
 
-    def plot_eventYields(self, log = False, privateWork = False, signal_class = None, sigScale = -1):
+    def plot_eventYields(self, log = False, privateWork = False, signal_class = None, sigScale = -1, ratio=False):
         eventYields = plottingScripts.plotEventYields(
             data                = self.data,
             prediction_vector   = self.model_prediction_vector,
@@ -894,7 +1146,7 @@ class DNN():
             plotdir             = self.save_path,
             logscale            = log)
 
-        eventYields.plot(privateWork = privateWork)
+        eventYields.plot(privateWork = privateWork, ratio=ratio)
 
     def plot_binaryOutput(self, log = False, privateWork = False, printROC = False,
                         nbins = None, bin_range = [0.,1.], name = "binary_discriminator",
@@ -979,6 +1231,12 @@ class DNN():
         c.Print(save_path + "/LL_mu" + str(mu) +".png")
         return sigmin, sigmax
 
+    def save_da_information(self):
+        # save roc and diagonals of confusion matrix for some domain adaptation analysis
+        self.da_information["roc_auc"] = self.roc_auc_score
+        self.da_information["diagonals"] = self.diagonals
+        self.da_information["domain_roc_auc"] = self.domain_roc_auc_score
+        pickle.dump(self.da_information, open( self.cp_path+"/da_information.p", "w" ) )
 
 def loadDNN(inputDirectory, outputDirectory, binary = False, signal = None, binary_target = None, total_weight_expr = 'x.Weight_XS * x.Weight_CSV * x.Weight_GEN_nom', category_cutString = None,
 category_label= None):

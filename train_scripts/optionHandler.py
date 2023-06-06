@@ -84,6 +84,13 @@ adversaryopts.add_option("--penalty", dest="penalty", default=1,
 adversaryopts.add_option("--addsamplenaming", dest="AddSampleNaming", default="_dnn_OL.h5",
         help="file ending for the samples in input directory (default _dnn.h5)", metavar="SAMPLENAMING")
 
+domainadaptopts = optparse.OptionGroup(parser, "Domain Adaptation Options")
+domainadaptopts.add_option("--da", dest="domain_adaptation", action="store_true", default=False,
+        help = "activate to use domain adaptation")
+domainadaptopts.add_option("--lambda", dest="grad_reversal_lambda", default=1, type = float, metavar = "GRAD_REVERSAL_LAMBDA",
+        help = "Multiply the gradient of the gradient reversal layer with this constant (default: lambda=1)")
+parser.add_option_group(domainadaptopts)
+
 
 class optionHandler:
     def __init__(self, argv):
@@ -278,3 +285,9 @@ class optionHandler:
 
     def getAddSampleSuffix(self):
         return self.__options.AddSampleNaming.replace("_dnn", "", 1)[:-3]
+
+    def doDomainAdaptation(self):
+        return self.__options.domain_adaptation
+
+    def getGradReversalLambda(self):
+        return self.__options.grad_reversal_lambda
